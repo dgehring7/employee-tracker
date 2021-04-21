@@ -82,6 +82,136 @@ const connection = mysql.createConnection({
       })
     }
 
+// Lets user see all employees
+    const seeEmpl = (Opt) => {
+      switch(opt){
+        case "byMan":
+          return connection.query('SELECT id, CONCAT(employee.first_name, employee.last_name) as manager FROM employee WHERE id = ANY (SELECT manager_id FROM employee);', (err, results) => {
+            if (err) throw err;
+            inquirer
+            .prompt({
+              name: 'choice',
+              type: 'list',
+              choices() {
+                const choiceArray = [];
+                results.forEach(({manager}) => {
+                  choiceArray.push(manager);
+                });
+                return choiceArray;
+              },
+              message: 'Whose employees would you like to see?'
+            }
+            ).then((answer) => {
+              let choiceId;
+              results.foreach((employee) => {
+                if(answer.choice === employee.manager){
+                  choiceId = employee.id;
+                }
+              });
+              connection.query('SELECT employee.first_name as First, employee.last_name as Last, role.title as Role, department.name as Department, CONCAT("$" role.salary as Salary) as Salary FROM employee Join role on employee.role_id = role.id JOIN Department on role.department_id = department.id WHERE employee.manager_id = ${choiceId', (err, results) => {
+                if (err) throw err;
+                console.table(results);
+                starter();
+              })
+            });
+          });
+      }
+    }
+
+// Adds and lets user select options
+    const seeOpt = () => {
+      inquirer
+       .prompt({
+         name: 'route',
+         type: 'list',
+         message: 'What would you like to add?',
+         choices: ['New Department', 'New Role', 'New Employee', 'Return'],
+       })
+       .then((answer) => {
+         switch(answer.route){
+           case 'New Department':
+             return addDept();
+           case 'New Role':
+             return addRole();
+           case 'New Employee':
+             return addEmpl();
+           case 'Return':
+             return starter();
+            }
+       });
+    }
+
+// Add department
+    const addDept = () => {
+      inquirer
+      .prompt({
+        name: 'name',
+        message: 'What is the Department name?'
+      })
+      .then((answer) => {
+        connection.query('INSERT INTO department SET ?',
+        {
+          name: answer.name
+        },
+        (err) => {
+          if (err) throw err;
+          console.log(`${answer.name} added to Departments.`);
+        }
+        )
+      })
+    }
+
+// Creates New Role
+const addRole = () => {
+  connection.query('SELECT * FROM department', (err, results) => {
+    if (err) throw err;
+    inquirer
+    .prompt([
+      {
+        name: 'title',
+        message: 'What is the new role?'
+      },
+      {
+        name: 'salary',
+        message: 'What is the salary for this role'?
+        validate: {
+          isNumeric: true
+        }
+      },
+      {
+        name: 'department',
+        type: 'list',
+        message: 'What department does this role belong to?',
+        choices(){
+          const choiceArray = [];
+          results.forEach(({name}) => {
+            choiceArray.push(name);
+          });
+          return choiceArray;
+        },
+      }
+    ]).then((answer) => {
+      let choiceId;
+      results.forEach((dept) => {
+        if(dept.name === answer.department){
+          choiceId = dept.id;
+        }
+      })
+      connection.query('INSERT INTO role SET ?', 
+      {
+        title: answer.title,
+        salary: answer.salary,
+        department_id: choiceId
+      },
+      (error) => {
+        if (err) throw err;
+        seeRole();
+      });
+    })
+  })
+}
+
+
 
 
   connection.connect((err) => {
