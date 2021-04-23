@@ -473,10 +473,93 @@ const delDept = () => {
   })
 }
 
+// Deletes a role and employees connected
+const delRole = () => {
+  connection.query('SELECT * FROM role', (err, results) => {
+    if (err) throw err;
+    inquirer
+    .prompt([
+      {
+        name: 'role',
+        message: 'What role do you want to delete?',
+        type: 'list',
+        choice() {
+          const choiceArray = [];
+          results.forEach(({title}) => {
+            choiceArray.push(title);
+          });
+          return choiceArray;
+        },
+      }
+    ])
+    connection.query('UPDATE employee SET ? WHERE manager_id IN (SELECT myid FROM(SELECT id AS my id FROM employee WHERE ?) as b)', [
+      {
+        manager_id: null
+      },
+      {
+        role_id: choiceRole.id
+      }], (err) => {
+        if (err) throw err;
+        connection.query('DELETE FROM employee WHERE ?',
+        {
+          role_id: choiceRole.id
+        }, (err) => {
+          if (err) throw err;
+          connection.query('DELETE FROM role WHERE ?',
+          {
+            id: choiceRole.id
+          }, (err) => {
+            if (err) throw err;
+            seeRole();
+          })
+        })
+      })
+    })
+}
+
+// Delete employee
+const delEmpl = () => {
+  connection.query('SELECT *, CONCAT(first_name, last_name) AS name FROM employee', (err, results) => {
+    if (err) throw err;
+    inquirer
+    .prompt([
+      {
+        name: 'employee',
+        message: 'What employee did you want to delete?',
+        type: 'list',
+        choice() {
+          const choiceArray = [];
+          results.forEach(({name}) => {
+            choiceArray.push(name);
+          });
+          return choiceArray;
+        },
+      }
+    ])
+    connection.query('UPDATE employee SET ? WHERE ?', [
+      {
+        manager_id: null
+      },
+      {
+        manager_id: chosenEmpl.id
+      }
+    ],
+    (err) => {
+      if (err) throw err;
+      connection.query('DELETE FROM employee WHERE ?', 
+      {
+        id: chosenEmpl.id
+      },
+      (err) => {
+        if (err) throw err;
+        seeEmpl();
+      })
+    })
+  })
+}
 
   connection.connect((err) => {
     if (err) throw err;
     // run the start function after the connection is made to prompt the user
-    start();
+    starter();
   });
-  
