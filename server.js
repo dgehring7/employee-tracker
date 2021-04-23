@@ -381,6 +381,98 @@ const updateEmpl = (opt, employee) => {
   }
 }
 
+// Allows user to delete options
+const deleteOpt = () => {
+  inquirer
+  .prompt({
+    name: 'route',
+    message: 'What would you like to delete?',
+    type: 'List',
+    choices: ['Delete Department', 'Delete Role', 'Delete Employee', 'Return'],
+  })
+  .then((answer) => {
+    switch(answer.route){
+      case 'Delete Department':
+        return delDept();
+      case 'Delete Role':
+        return delRole();
+      case 'Delete Employee':
+        return delEmpl();
+      case 'Return':
+        return starter();
+    }
+  });
+}
+
+// Deletes department plus anything connected to it
+const delDept = () => {
+  connection.query('SELECT * FROM department', (err, results) => {
+    if (err) throw err;
+    inquirer
+    .prompt([
+      {
+        name: 'department',
+        message: 'What department would you like to delete?',
+        type: 'list',
+        choices() {
+          const choiceArray = [];
+          results.forEach(({name}) => {
+            choiceArray.push(name);
+          });
+          return choiceArray;
+        }
+      },
+      {
+        name: 'confirm',
+        message: 'Are you sure you want to delete the department and all related information?',
+        type: 'list',
+        choices: ['Yes', 'No']
+      },
+    ]).then((answer) => {
+      switch(answer.confirm){
+        case 'No':
+          return starter();
+        default:
+          let choiceDept;
+          results.forEach((dept) => {
+            if (dept.name === answer.department){
+              choiceDept = dept;
+            }
+          })
+          connection.query('UPDATE employee SET ? WHERE manager_id IN (SELECT myid FROM (SELECT id AS myid FROM employee WHERE role_id = ANY (SELECT id FROM role WHERE ?)) as b)', [
+          {
+            manager_id: null
+          },
+          {
+            department_id: choiceDept.id
+          }
+        ], (err) => {
+          if (err) throw err;
+          connection.query('DELETE FROM employee WHERE role_id = ANY (SELECT id FROM role WHERE ?)',
+          {
+            department_id: choiceDept.id
+          }, (err) => {
+            if (err) throw err;
+            connection.query('DELETE FROM role WHERE ?',
+            {
+              department_id: choiceDept.id
+            }, (err) => {
+              if (err) throw err;
+              connection.query('DELETE FROM department WHERE ?',
+              {
+                id: choiceDept.id
+              }, (err) => {
+                if (err) throw err;
+                seeDept();
+              })
+            })
+          })
+        })
+      }
+    })
+  })
+}
+
 
   connection.connect((err) => {
     if (err) throw err;
