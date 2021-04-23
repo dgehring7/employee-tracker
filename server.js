@@ -307,7 +307,79 @@ const addRole = () => {
   });
 }
 
-
+// Updates employee role or employee manager
+const updateEmpl = (opt, employee) => {
+  switch(opt) {
+    case 'role':
+      return connection.query('SELECT * FROM role', (err, results) => {
+        if (err) throw err;
+        inquirer
+        .prompt({
+          name: 'role',
+          message: 'What role would you like to assign to the employee?',
+          type: 'list',
+          choices() {
+            const choiceArray = [];
+            results.forEach(({title, id}) => {
+              if (id !== employee.role_id) {
+                choiceArray.push(title);
+              };
+            });
+            return choiceArray;
+          },
+        }).then((answer) => {
+          let choiceRole;
+          results.forEach((role) => {
+            if (answer.role === role.title) {
+              choiceRole = role;
+            }
+          })
+          connection.query('UPDATE employee SET ? WHERE ?',
+          [{
+            role_id: choiceRole.id
+          },
+          {
+            id: employee.id
+          }])
+          seeEmpl();
+        })
+      })
+    case "man":
+      return connection.query('SELECT * CONCAT(first_name, last_name) AS name FROM employee', (err, results) => {
+        if (err) throw err;
+        inquirer
+        .prompt({
+          name: 'man',
+          message: `${employee.name} will become whose manager?`,
+          type: 'list',
+          choices() {
+            const choiceArray = [];
+            results.forEach(({name, id}) => {
+              if (id !== employee.manager_id && id !== employee.id) {
+                choiceArray.push(name);
+              };
+            });
+            return choiceArray;
+          },
+        }).then((answer) => {
+          let choiceMan;
+          results.forEach((employee) => {
+            if (answer.man === employee.name) {
+              choiceMan = employee;
+            }
+        })
+        connection.query('UPDATE employee SET ? WHERE ?',
+        [{
+          manager_id: choiceMan.id
+        },
+        {
+          id: employee.id
+        }])
+        seeEmpl();
+      })
+    })
+  }
+}
 
 
   connection.connect((err) => {
