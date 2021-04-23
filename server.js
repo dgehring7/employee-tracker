@@ -211,7 +211,57 @@ const addRole = () => {
   })
 }
 
-
+// Adds employee
+  const addEmpl = () => {
+    connection.query('SELECT * FROM role', (err, results) => {
+      if (err) throw error;
+    connection.query('SELECT *, CONCAT(first_name, last_name) AS name FROM employee', (err, results) => {
+      if (err) throw err;
+      inquirer
+      .prompt([
+        {
+          name: 'first',
+          message: "What is the employees first name?"
+        },
+        {
+          name: 'last',
+          message: 'What is the employees last name?'
+        },
+        {
+          name: 'role',
+          message: 'What is the employees role?',
+          type: 'list',
+          choices(){
+            const choiceArray = [];
+            resRole.forEach(({title}) => {
+              choiceArray.push(title);
+            });
+            return choiceArray;
+          }
+        }
+      ]).then((answer) => {
+        let choiceRole;
+        let choiceMan = {id: null};
+        resRole.foreEach((role) => {
+          if(role.title === answer.role)
+            choiceRole = role;
+        });
+        connection.query('INSERT INTO employee SET ?',
+        {
+          first_name: answer.first,
+          last_name: answer.last,
+          role_id: choiceRole.id,
+          managerid: choiceMan.id
+        },
+        (err) => {
+          if (err) throw err;
+          console.log(`Successfuly added employee ${answer.first} ${answer.last}`)
+          seeEmpl();
+        });
+      })
+      })
+    });
+  }
 
 
   connection.connect((err) => {
