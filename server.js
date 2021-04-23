@@ -211,7 +211,7 @@ const addRole = () => {
   })
 }
 
-// Adds employee
+// ADDS employee
   const addEmpl = () => {
     connection.query('SELECT * FROM role', (err, results) => {
       if (err) throw error;
@@ -262,6 +262,52 @@ const addRole = () => {
       })
     });
   }
+
+  // Allows user to UPDATE employee info
+  const updateOpt = () => {
+    connection.query('SELECT *, CONCAT(first_name, last_name) AS name From employee', (err, results) => {
+      if (err) throw err;
+      inquirer
+      .prompt([
+        {
+          name: 'route',
+          message: 'What would you like to update?',
+          type: 'list',
+          choices: ['Update employee role', 'Update Employee Manager', 'Return'],
+        },
+        {
+          name: 'employee',
+          message: 'What employee would you like to update?',
+          type: 'list',
+          choices(){
+            const choiceArray = [];
+            results.forEach(({name}) => {
+            choiceArray.push(name);
+            });
+            return choiceArray;
+          },
+        }
+      ])
+      .then((answer) => {
+        let chosenEmpl;
+        results.forEach((employee) => {
+          if (employee.name === answer.employee) {
+            chosenEmpl = employee;
+          }
+        })
+        switch(answer.route) {
+          case 'Update Employee Role':
+            return updateEmpl('role', chosenEmpl);
+          case 'Update Employee Manager':
+            return updateEmpl('man', chosenEmpl);
+          case 'Return':
+            return starter();
+        }
+      });
+  });
+}
+
+
 
 
   connection.connect((err) => {
