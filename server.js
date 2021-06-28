@@ -7,7 +7,6 @@ const connection = mysql.createConnection({
     host: 'localhost',
     // Your port; if not 3306
     port: 3306,
-    // Your username, password and database
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME
@@ -119,7 +118,7 @@ const connection = mysql.createConnection({
     }
 
 // Adds and lets user select options
-    const seeOpt = () => {
+    const addOpt = () => {
       inquirer
        .prompt({
          name: 'route',
