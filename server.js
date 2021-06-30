@@ -174,8 +174,8 @@ const addRole = () => {
         name: 'salary',
         message: 'What is the salary for this role'?
         validate: {
-          isNumeric: true
-        }
+          isNumeric: true,
+        },
       },
       {
         name: 'department',
