@@ -1,22 +1,14 @@
-const mysql = require('mysql');
+
 const inquirer = require('inquirer');
 require('dotenv').config();
 const cTable = require('console.table');
-
-const connection = mysql.createConnection({
-    host: 'localhost',
-    // Your port; if not 3306
-    port: 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
-  });
+const connection = require("./config/connection.js");
 
   // Very beginning/ initial entry point. Lets user choose options
     const starter = () => {
       inquirer
       .prompt({
-        name: 'route',
+        name: 'choice',
         type: 'list',
         message: 'What would you like to do?',
         choices: ['View', 'Add', 'Update', 'Delete', 'Exit'],
@@ -65,7 +57,7 @@ const connection = mysql.createConnection({
 
 // Lets the user see all the departments
     const seeDept = () => {
-      connection.query('SELECT department.name as Department, CONCAT("$", SUM(role.salary, 0)) as Budget, Count(employee.id) as Employee Count FROM department LEFT JOIN role on role.department_id = department.id LEFT JOIN employee ON employee.role_id = role.id GROUP BY department;', (err, results) => {
+      connection.query('SELECT department.name as Department, CONCAT("$", SUM(IFNULL(role.salary, 0))) as Budget, COUNT(employee.id) as "Employee Count" FROM department LEFT JOIN role ON role.department_id = department.id LEFT JOIN employee ON employee.role_id = role.id GROUP BY Department;', (err, results) => {
         if (err) throw err;
         console.table(results);
         starter();
@@ -74,7 +66,7 @@ const connection = mysql.createConnection({
 
 // Lets user see all the roles
     const seeRole = () => {
-      connection.query('SELECT role.title as Role, Concat("$", role.salary) as Salary, department.name AS Department FROM role Join department ON role.department_id;', (err, results) => {
+      connection.query('SELECT role.title as Role, CONCAT("$", role.salary) as Salary, department.name AS Department FROM role JOIN department ON role.department_id = department.id;', (err, results) => {
         if (err) throw err;
         console.table(results);
         starter();
@@ -85,8 +77,8 @@ const connection = mysql.createConnection({
     const seeEmpl = (Opt) => {
       switch(opt){
         case "byMan":
-          return connection.query('SELECT id, CONCAT(employee.first_name, employee.last_name) as manager FROM employee WHERE id = ANY (SELECT manager_id FROM employee);', (err, results) => {
-            if (err) throw err;
+          return connection.query('SELECT id, CONCAT(employee.first_name, " ", employee.last_name) as manager FROM employee WHERE id = ANY (SELECT manager_id FROM employee);',  (err, results) => {
+       if (err) throw err;
             inquirer
             .prompt({
               name: 'choice',
@@ -155,6 +147,7 @@ const connection = mysql.createConnection({
         (err) => {
           if (err) throw err;
           console.log(`${answer.name} added to Departments.`);
+          seeDept();
         }
         )
       })
@@ -212,9 +205,9 @@ const addRole = () => {
 
 // ADDS employee
   const addEmpl = () => {
-    connection.query('SELECT * FROM role', (err, results) => {
+    connection.query('SELECT * FROM role', (err, resRole) => {
       if (err) throw error;
-    connection.query('SELECT *, CONCAT(first_name, last_name) AS name FROM employee', (err, results) => {
+      connection.query('SELECT *, CONCAT(first_name, " ", last_name) AS name FROM employee', (err, resName) => {
       if (err) throw err;
       inquirer
       .prompt([
@@ -236,8 +229,20 @@ const addRole = () => {
               choiceArray.push(title);
             });
             return choiceArray;
+          },
+        },
+          {
+            type: 'list',
+            name: "man",
+            message: "Who is this employee's manager?",
+            choices(){
+              const choiceArray = ["No Manager"];
+              resName.forEach(({name}) => {
+                choiceArray.push(name);
+              });
+              return choiceArray;
+            }
           }
-        }
       ]).then((answer) => {
         let choiceRole;
         let choiceMan = {id: null};
@@ -245,6 +250,13 @@ const addRole = () => {
           if(role.title === answer.role)
             choiceRole = role;
         });
+
+        resName.forEach((employee) => {
+          if(employee.name === answer.man){
+            choiceMan = employee;
+          }
+        })
+        
         connection.query('INSERT INTO employee SET ?',
         {
           first_name: answer.first,
