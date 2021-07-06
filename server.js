@@ -14,7 +14,7 @@ const connection = require("./config/connection.js");
         choices: ['View', 'Add', 'Update', 'Delete', 'Exit'],
       })
       .then((answer) => {
-        switch(answer.route){
+        switch(answer.choice){
           case 'View':
             return seeOpt();
           case 'Add':
@@ -47,8 +47,8 @@ const connection = require("./config/connection.js");
              return seeRole();
             case 'See Employee':
              return seeEmpl();
-            case 'See Employee by Manager':
-             return seeEmpl('byMan');
+            case 'See Employees by Manager':
+             return seeEmplMan();
             case 'Return':
              return starter();
          }
@@ -57,7 +57,7 @@ const connection = require("./config/connection.js");
 
 // Lets the user see all the departments
     const seeDept = () => {
-      connection.query('SELECT department.name as Department, CONCAT("$", SUM(IFNULL(role.salary, 0))) as Budget, COUNT(employee.id) as "Employee Count" FROM department LEFT JOIN role ON role.department_id = department.id LEFT JOIN employee ON employee.role_id = role.id GROUP BY Department;', (err, results) => {
+      return connection.query('SELECT department.name as Department, CONCAT("$", SUM(IFNULL(role.salary, 0))) as Budget, COUNT(employee.id) as "Employee Count" FROM department LEFT JOIN role ON role.department_id = department.id LEFT JOIN employee ON employee.role_id = role.id GROUP BY Department;', (err, results) => {
         if (err) throw err;
         console.table(results);
         starter();
@@ -73,12 +73,13 @@ const connection = require("./config/connection.js");
       })
     }
 
-// Lets user see all employees
-    const seeEmpl = (Opt) => {
-      switch(opt){
-        case "byMan":
-          return connection.query('SELECT id, CONCAT(employee.first_name, " ", employee.last_name) as manager FROM employee WHERE id = ANY (SELECT manager_id FROM employee);',  (err, results) => {
+// Lets user see all employees by manager
+    const seeEmplMan = () => {
+      console.log('manager');
+          return connection.query('SELECT id, CONCAT(employee.first_name, " ", employee.last_name) as manager FROM employee WHERE manager_id IS NOT NULL;',  (err, results) => {
        if (err) throw err;
+        console.log('heres manager');
+       console.table(results);
             inquirer
             .prompt({
               name: 'choice',
@@ -88,14 +89,15 @@ const connection = require("./config/connection.js");
                 results.forEach(({manager}) => {
                   choiceArray.push(manager);
                 });
-                return choiceArray;
+                return {'choices': choiceArray}
               },
               message: 'Whose employees would you like to see?'
             }
             ).then((answer) => {
               let choiceId;
               results.foreach((employee) => {
-                if(answer.choice === employee.manager){
+                console.log('employee', employee);
+                if(answer.choice === employee.manager_id){
                   choiceId = employee.id;
                 }
               });
@@ -107,7 +109,14 @@ const connection = require("./config/connection.js");
             });
           });
       }
-    }
+
+      const seeEmpl = () => {
+        return connection.query('SELECT id, CONCAT(employee.first_name, " ", employee.last_name) FROM employee',  (err, results) => {
+     if (err) throw err;
+     console.table(results);
+              starter();
+            })
+          };
 
 // Adds and lets user select options
     const addOpt = () => {
@@ -153,8 +162,11 @@ const connection = require("./config/connection.js");
       })
     }
 
+    
 // Creates New Role
 const addRole = () => {
+  const departmentChoices = seeDept();
+  console.log('departmentChoices', departmentChoices);
   connection.query('SELECT * FROM department', (err, results) => {
     if (err) throw err;
     inquirer
@@ -174,13 +186,7 @@ const addRole = () => {
         name: 'department',
         type: 'list',
         message: 'What department does this role belong to?',
-        choices(){
-          const choiceArray = [];
-          results.forEach(({name}) => {
-            choiceArray.push(name);
-          });
-          return choiceArray;
-        },
+        choices: departmentChoices
       }
     ]).then((answer) => {
       let choiceId;
@@ -252,11 +258,11 @@ const addRole = () => {
         });
 
         resName.forEach((employee) => {
-          if(employee.name === answer.man){
+          if(employee.name === answer.manager_id){
             choiceMan = employee;
           }
         })
-        
+
         connection.query('INSERT INTO employee SET ?',
         {
           first_name: answer.first,
@@ -312,14 +318,14 @@ const addRole = () => {
           case 'Update Employee Manager':
             return updateEmpl('man', chosenEmpl);
           case 'Return':
-            return starter();
+            return updateOpt();
         }
       });
   });
 }
 
 // Updates employee role or employee manager
-const updateEmpl = (opt, employee) => {
+const updateEmpl = (employee) => {
   switch(opt) {
     case 'role':
       return connection.query('SELECT * FROM role', (err, results) => {

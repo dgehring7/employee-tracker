@@ -98,7 +98,7 @@ WHERE department_id = ?;
 DELETE FROM department
 WHERE id = ?;
 
--- delete role (clean|deletes employees)
+-- delete role (deletes employees)
 DELETE FROM role
 WHERE id = ?;
 
